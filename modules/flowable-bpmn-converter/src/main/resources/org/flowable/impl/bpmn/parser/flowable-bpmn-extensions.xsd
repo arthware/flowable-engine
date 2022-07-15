@@ -517,12 +517,27 @@
     <complexType>
       <sequence>
         <element ref="tns:field" minOccurs="0" maxOccurs="unbounded" />
+        <element ref="tns:script" minOccurs="0" maxOccurs="1">
+          <annotation>
+            <documentation>
+              The script information. Required, when taskListener is of type="script".
+            </documentation>
+          </annotation>
+        </element>
       </sequence>
       <attribute name="class" type="string">
         <annotation>
           <documentation>
             An implementation of the org.flowable.engine.delegate.TaskListener interface
             that will be called when the task event occurs.
+          </documentation>
+        </annotation>
+      </attribute>
+      <attribute name="type" type="string" use="optional">
+        <annotation>
+          <documentation>
+            The type of the listener. Currently, type="script" is supported
+            to execute inline scripts supported by the engine.
           </documentation>
         </annotation>
       </attribute>
@@ -598,6 +613,30 @@
       </attribute>
     </complexType>
   </element>
+
+  <element name="script">
+    <complexType>
+      <simpleContent>
+        <extension base="string">
+          <attribute name="language" use="required">
+            <annotation>
+              <documentation>
+                The language of the script e.g. juel, groovy javascript. Depends on what the engine supports.
+              </documentation>
+            </annotation>
+          </attribute>
+          <attribute name="resultVariable" use="optional">
+            <annotation>
+              <documentation>
+                 The name of the variable where the script return value should be stored.
+              </documentation>
+            </annotation>
+          </attribute>
+        </extension>
+      </simpleContent>
+    </complexType>
+  </element>
+
 
   <element name="executionListener">
     <annotation>
