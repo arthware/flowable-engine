@@ -27,7 +27,7 @@
 		<scriptTask id="theScriptTask" name="Execute script" scriptFormat="groovy">
 	      <script>
 	      	// Throw an exception in script task
-	        throw new RuntimeException("This is an exception thrown from scriptTask")
+			  throw new org.flowable.common.engine.api.FlowableException("This is an exception thrown from scriptTask")
 	      </script>
 	    </scriptTask>
 

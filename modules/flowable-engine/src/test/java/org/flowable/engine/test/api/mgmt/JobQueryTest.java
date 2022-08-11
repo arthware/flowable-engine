@@ -72,7 +72,7 @@ public class JobQueryTest extends PluggableFlowableTestCase {
 
     private static final long ONE_HOUR = 60L * 60L * 1000L;
     private static final long ONE_SECOND = 1000L;
-    private static final String EXCEPTION_MESSAGE = "problem evaluating script: javax.script.ScriptException: java.lang.RuntimeException: This is an exception thrown from scriptTask";
+    private static final String EXCEPTION_MESSAGE = "This is an exception thrown from scriptTask";
     private String deploymentId;
     private String messageId;
     private CommandExecutor commandExecutor;
@@ -584,12 +584,13 @@ public class JobQueryTest extends PluggableFlowableTestCase {
     @Test
     @Deployment(resources = { "org/flowable/engine/test/api/mgmt/ManagementServiceTest.testGetJobExceptionStacktrace.bpmn20.xml" })
     public void testQueryByExceptionMessage() {
-        TimerJobQuery query = managementService.createTimerJobQuery().exceptionMessage(EXCEPTION_MESSAGE);
+        TimerJobQuery query = managementService.createTimerJobQuery().exceptionMessage("This is an exception thrown from scriptTask");
         verifyQueryResults(query, 0);
 
         ProcessInstance processInstance = startProcessInstanceWithFailingJob();
-
-        query = managementService.createTimerJobQuery().exceptionMessage(EXCEPTION_MESSAGE);
+        List<Job> list = managementService.createTimerJobQuery().list();
+        list.forEach(c ->System.out.println("abcdef " +c.getExceptionMessage()));
+        query = managementService.createTimerJobQuery().exceptionMessage("This is an exception thrown from scriptTask");
         verifyFailedJob(query, processInstance);
     }
 
@@ -913,7 +914,7 @@ public class JobQueryTest extends PluggableFlowableTestCase {
             managementService.executeJob(timerJob.getId());
         })
                 .isInstanceOf(FlowableException.class)
-                .hasMessage(EXCEPTION_MESSAGE);
+                .hasMessageContaining(EXCEPTION_MESSAGE);
 
         return processInstance;
     }
