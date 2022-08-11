@@ -227,6 +227,30 @@ public class ScriptingEnginesTest {
         });
     }
 
+    @Test
+    public void expectNoErrorThrownWithIgnoreErrorButScriptTraceListenerCalled() {
+        // GIVEN
+        List<ScriptTrace> capturedTrace = new LinkedList<>();
+        engines.setScriptTraceListener(scriptTrace -> capturedTrace.add(scriptTrace));
+        ScriptEngineRequest errorRequest = ScriptEngineRequest.builder()
+                .failOnError(false)
+                .script("throw Error('MyError');")
+                .language("JavaScript")
+                .traceEnhancer(trace -> trace.addTraceTag("requestSpecific", "bar"))
+                .build();
+
+        // WHEN
+        Object result = engines.evaluate(errorRequest).getResult();
+
+        // THEN
+        assertThat(result).isNull();
+        assertThat(capturedTrace).singleElement().satisfies(c -> {
+            assertThat(c.getTraceTags()).containsExactly(entry("requestSpecific", "bar"));
+            assertThat(c.getException()).isNotNull();
+            assertThat(c.hasException()).isTrue();
+        });
+    }
+
     public static class MyBean {
 
         protected String foo;

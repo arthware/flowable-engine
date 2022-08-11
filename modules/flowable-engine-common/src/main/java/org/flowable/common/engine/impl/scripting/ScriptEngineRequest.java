@@ -21,7 +21,7 @@ import org.flowable.common.engine.api.variable.VariableContainer;
 /**
  * Request to execute a script in the scripting environment.
  * Use {@link ScriptEngineRequest#builder()} to create and configure instances.
-  */
+ */
 public class ScriptEngineRequest {
 
     protected final String language;
@@ -29,7 +29,8 @@ public class ScriptEngineRequest {
     protected final VariableContainer variableContainer;
     protected final List<Resolver> additionalResolvers;
     protected final boolean storeScriptVariables;
-    public ScriptTraceEnhancer errorTraceEnhancer;
+    protected ScriptTraceEnhancer errorTraceEnhancer;
+    protected boolean failOnError = true;
 
     /**
      * @return a new Builder instance to create a {@link ScriptEngineRequest}
@@ -49,6 +50,7 @@ public class ScriptEngineRequest {
         protected List<Resolver> additionalResolvers = new LinkedList<>();
         protected boolean storeScriptVariables;
         protected ScriptTraceEnhancer errorTraceEnhancer;
+        private Boolean failOnError;
 
         protected Builder() {
         }
@@ -114,16 +116,30 @@ public class ScriptEngineRequest {
             return this;
         }
 
+        public Builder failOnError(boolean failOnError) {
+            this.failOnError = failOnError;
+            return this;
+        }
+
         public ScriptEngineRequest build() {
             if (script == null || script.isEmpty()) {
                 throw new FlowableIllegalStateException("A script is required");
+            }
+            if (failOnError == null) {
+                /*
+                 *if juel fails, it returns the expression text by default.
+                 * When not enforced, we don't fail on juel expression error by default as
+                 * this breaks a lot.
+                 */
+                failOnError = "juel".equalsIgnoreCase(language) ? Boolean.FALSE : Boolean.TRUE;
             }
             return new ScriptEngineRequest(script,
                     language,
                     variableContainer,
                     storeScriptVariables,
                     additionalResolvers,
-                    errorTraceEnhancer);
+                    errorTraceEnhancer,
+                    failOnError.booleanValue());
         }
     }
 
@@ -132,13 +148,14 @@ public class ScriptEngineRequest {
             VariableContainer variableContainer,
             boolean storeScriptVariables,
             List<Resolver> additionalResolvers,
-            ScriptTraceEnhancer errorTraceEnhancer) {
+            ScriptTraceEnhancer errorTraceEnhancer, boolean failOnError) {
         this.script = script;
         this.language = language;
         this.variableContainer = variableContainer;
         this.storeScriptVariables = storeScriptVariables;
         this.additionalResolvers = additionalResolvers;
         this.errorTraceEnhancer = errorTraceEnhancer;
+        this.failOnError = failOnError;
     }
 
     /**
@@ -167,6 +184,10 @@ public class ScriptEngineRequest {
      */
     public boolean isStoreScriptVariables() {
         return storeScriptVariables;
+    }
+
+    public boolean isFailOnError() {
+        return failOnError;
     }
 
     /**

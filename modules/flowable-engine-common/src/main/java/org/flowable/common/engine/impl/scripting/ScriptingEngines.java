@@ -109,7 +109,7 @@ public class ScriptingEngines {
         long startMillis = System.currentTimeMillis();
         try {
             Object scriptResult = scriptEngine.eval(request.getScript(), bindings);
-            if ("juel".equalsIgnoreCase(request.getLanguage()) && (scriptResult instanceof String) && request.getScript().equals(scriptResult.toString())) {
+            if (request.isFailOnError() && "juel".equalsIgnoreCase(request.getLanguage()) && (scriptResult instanceof String) && request.getScript().equals(scriptResult.toString())) {
                 throw new JuelEvaluationException(String.format("Expression \"%s\" failed to be evaluated.", request.getScript()));
             }
             if (scriptTraceListener != null && scriptTraceListener.shouldBeTraced(request, false)) {
@@ -273,8 +273,12 @@ public class ScriptingEngines {
     }
 
     public static class DefaultExceptionHandler implements ScriptEvaluationExceptionHandler {
+
         @Override
         public Object handleException(ScriptTrace errorTrace, Throwable scriptException) {
+            if (!errorTrace.getRequest().isFailOnError()) {
+                return null;
+            }
             Throwable rootCause = ExceptionUtils.getRootCause(scriptException);
             if (rootCause instanceof FlowableException) {
                 throw (FlowableException) rootCause;

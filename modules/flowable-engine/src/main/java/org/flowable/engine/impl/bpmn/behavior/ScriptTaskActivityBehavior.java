@@ -113,7 +113,7 @@ public class ScriptTaskActivityBehavior extends TaskActivityBehavior {
     protected void executeScript(DelegateExecution execution) {
 
         ScriptingEngines scriptingEngines = CommandContextUtil.getProcessEngineConfiguration().getScriptingEngines();
-        ScriptEngineRequest.Builder builder = ScriptEngineRequest.builder().script(script).language(language).variableContainer(execution);
+        ScriptEngineRequest.Builder builder = ScriptEngineRequest.builder().script(script).failOnError(true).language(language).variableContainer(execution);
         builder = storeScriptVariables ? builder.storeScriptVariables() : builder;
         ScriptEngineRequest request = builder.build();
         Object result = scriptingEngines.evaluate(request).getResult();
