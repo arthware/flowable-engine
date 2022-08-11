@@ -109,6 +109,7 @@ public class DefaultListenerFactory extends AbstractBehaviorFactory implements L
     public TaskListener createScriptTypeTaskListener(FlowableListener listener) {
         if (listener.getScriptInfo() != null) {
             ScriptTypeTaskListener scriptListener = new ScriptTypeTaskListener(
+                    listener,
                     createExpression(listener.getScriptInfo().getLanguage()),
                     createExpression(listener.getScriptInfo().getScript()));
             Optional.ofNullable(listener.getScriptInfo().getResultVariable())

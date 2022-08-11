@@ -16,6 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.flowable.common.engine.api.FlowableException;
 import org.flowable.common.engine.impl.interceptor.CommandContext;
+import org.flowable.common.engine.impl.scripting.ScriptEngineRequest;
 import org.flowable.common.engine.impl.scripting.ScriptingEngines;
 import org.flowable.engine.DynamicBpmnConstants;
 import org.flowable.engine.delegate.BpmnError;
@@ -92,7 +93,6 @@ public class ScriptTaskActivityBehavior extends TaskActivityBehavior {
         try {
             executeScript(execution);
         } catch (FlowableException e) {
-
             LOGGER.warn("Exception while executing {} : {}", execution.getCurrentFlowElement().getId(), e.getMessage());
 
             noErrors = false;
@@ -113,19 +113,13 @@ public class ScriptTaskActivityBehavior extends TaskActivityBehavior {
     protected void executeScript(DelegateExecution execution) {
 
         ScriptingEngines scriptingEngines = CommandContextUtil.getProcessEngineConfiguration().getScriptingEngines();
-        Object result = scriptingEngines.evaluate(script, language, execution, storeScriptVariables);
-
-        if (null != result) {
-            if ("juel".equalsIgnoreCase(language) && (result instanceof String) && script.equals(result.toString())) {
-                throw new FlowableException(String.format("Error evaluating juel script: \"%s\" of activity id: %s of process definition id: %s",
-                        script, execution.getCurrentActivityId(), execution.getProcessDefinitionId()));
-            }
-        }
+        ScriptEngineRequest.Builder builder = ScriptEngineRequest.builder().script(script).language(language).variableContainer(execution);
+        builder = storeScriptVariables ? builder.storeScriptVariables() : builder;
+        ScriptEngineRequest request = builder.build();
+        Object result = scriptingEngines.evaluate(request).getResult();
 
         if (resultVariable != null) {
             execution.setVariable(resultVariable, result);
         }
-
     }
-
 }

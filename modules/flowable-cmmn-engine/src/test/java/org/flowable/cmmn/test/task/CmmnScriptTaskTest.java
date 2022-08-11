@@ -24,9 +24,9 @@ import org.flowable.cmmn.api.runtime.PlanItemInstance;
 import org.flowable.cmmn.engine.test.CmmnDeployment;
 import org.flowable.cmmn.engine.test.FlowableCmmnTestCase;
 import org.flowable.cmmn.engine.test.impl.CmmnHistoryTestHelper;
-import org.flowable.common.engine.api.FlowableException;
 import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.common.engine.impl.history.HistoryLevel;
+import org.flowable.common.engine.impl.scripting.FlowableScriptEvaluationException;
 import org.flowable.variable.api.history.HistoricVariableInstance;
 import org.junit.Test;
 
@@ -305,11 +305,12 @@ public class CmmnScriptTaskTest extends FlowableCmmnTestCase {
         PlanItemInstance blockerPlanItemInstance = cmmnRuntimeService.createPlanItemInstanceQuery().planItemInstanceElementId("blockerPlanItem").singleResult();
         assertThat(blockerPlanItemInstance).isNotNull();
         assertThatThrownBy(() -> cmmnRuntimeService.triggerPlanItemInstance(blockerPlanItemInstance.getId()))
-            .isExactlyInstanceOf(FlowableException.class)
-            .hasMessage("problem evaluating script: java.lang.RuntimeException: Illegal argument in script in <eval> at line number 2 at column number 28")
-            .getRootCause()
+            .isExactlyInstanceOf(FlowableScriptEvaluationException.class)
+            .hasMessageContaining("JavaScript script evaluation failed: java.lang.RuntimeException: Illegal argument in script in <eval> at line number 2 at column number 28")
+            .rootCause()
             .isExactlyInstanceOf(RuntimeException.class)
             .hasMessage("Illegal argument in script");
+
 
         assertCaseInstanceNotEnded(caseInstance);
     }

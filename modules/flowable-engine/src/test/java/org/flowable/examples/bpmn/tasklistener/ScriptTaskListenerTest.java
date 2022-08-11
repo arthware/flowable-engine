@@ -69,8 +69,8 @@ public class ScriptTaskListenerTest extends PluggableFlowableTestCase {
     public void testThrowNonFlowableException() {
         assertThatThrownBy(() -> runtimeService.startProcessInstanceByKey("scriptTaskListenerProcess"))
                 .isInstanceOf(FlowableException.class)
-                .hasMessage("problem evaluating script: java.lang.RuntimeException: Illegal argument in listener in <eval> at line number 2 at column number 7")
-                .getRootCause()
+                .hasMessageContaining("JavaScript script evaluation failed: java.lang.RuntimeException: Illegal argument in listener in <eval> at line number 2 at column number 7 Trace: processDefinitionKey=scriptTaskListenerProcess")
+                .rootCause()
                 .isExactlyInstanceOf(RuntimeException.class)
                 .hasMessage("Illegal argument in listener");
     }

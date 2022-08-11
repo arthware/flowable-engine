@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.flowable.common.engine.api.FlowableException;
 import org.flowable.common.engine.api.FlowableIllegalArgumentException;
+import org.flowable.common.engine.impl.scripting.FlowableScriptEvaluationException;
 import org.flowable.common.engine.impl.util.CollectionUtil;
 import org.flowable.engine.impl.test.PluggableFlowableTestCase;
 import org.flowable.engine.runtime.ProcessInstance;
@@ -94,7 +95,22 @@ public class ScriptTaskTest extends PluggableFlowableTestCase {
         assertThatThrownBy(() -> runtimeService.startProcessInstanceByKey("testErrorInScript"))
                 .as("Starting process should result in error in script")
                 .isInstanceOf(FlowableException.class)
-                .hasMessageContaining("Error evaluating juel script");
+                .hasMessageContaining("juel script evaluation failed: Expression \"execution.setVariable(\"myVar\", scriptVar)\" failed to be evaluated.")
+                .hasMessageContaining("processDefinitionKey=testErrorInScript")
+                .hasMessageContaining("activityId=theScriptTaskWithJuel");
+    }
+
+    @Test
+    @Deployment
+    public void testErrorInScriptJavaScript() {
+        assertThatThrownBy(() -> runtimeService.startProcessInstanceByKey("testErrorInScript"))
+                .as("Starting process should result in error in script")
+                .isInstanceOf(FlowableScriptEvaluationException.class)
+                .hasMessageContaining(
+                        "JavaScript script evaluation failed: TypeError: foo.substring is not a function in <eval> at line number 2 ")
+                .hasMessageContaining("processDefinitionKey=testErrorInScript")
+                .hasMessageContaining("activityId=theScriptTaskWithJavaScript")
+        ;
     }
     
     @Test

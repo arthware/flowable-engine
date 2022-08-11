@@ -12,6 +12,7 @@
  */
 package org.flowable.engine.impl.bpmn.listener;
 
+import org.flowable.bpmn.model.FlowableListener;
 import org.flowable.common.engine.api.delegate.Expression;
 import org.flowable.common.engine.impl.scripting.AbstractScriptEvaluator;
 import org.flowable.common.engine.impl.scripting.ScriptingEngines;
@@ -29,8 +30,10 @@ import org.flowable.task.service.delegate.DelegateTask;
 public class ScriptTypeTaskListener extends AbstractScriptEvaluator implements TaskListener {
 
     private static final long serialVersionUID = -8915149072830499057L;
+    protected FlowableListener listener;
 
-    public ScriptTypeTaskListener(Expression language, Expression script) {
+    public ScriptTypeTaskListener(FlowableListener listener, Expression language, Expression script) {
+        this.listener = listener;
         this.script = script;
         this.language = language;
     }

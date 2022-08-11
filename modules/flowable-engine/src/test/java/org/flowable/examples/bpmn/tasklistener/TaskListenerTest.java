@@ -20,10 +20,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.flowable.common.engine.api.FlowableException;
 import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.common.engine.api.FlowableIllegalStateException;
 import org.flowable.common.engine.impl.history.HistoryLevel;
+import org.flowable.common.engine.impl.scripting.FlowableScriptEvaluationException;
 import org.flowable.engine.impl.test.HistoryTestHelper;
 import org.flowable.engine.impl.test.PluggableFlowableTestCase;
 import org.flowable.engine.runtime.ProcessInstance;
@@ -361,5 +361,19 @@ public class TaskListenerTest extends PluggableFlowableTestCase {
         // Expect evaluation of script supports expressions for language, payload and resultVariable
         Object task2ScriptListenerResult = runtimeService.getVariable(processInstance.getId(), "task2ScriptListenerResult");
         assertThat(task2ScriptListenerResult).as("Expected 'task2ScriptListenerResult' variable in variable scope").isEqualTo("usertask2ReturnVal");
+    }
+
+    /**
+     * Tests error trace enhacement by {@link org.flowable.engine.impl.scripting.ProcessEngineScriptTraceEnhancer}.
+     */
+    @Test
+    @Deployment(resources = { "org/flowable/examples/bpmn/tasklistener/TaskListenerTypeScript.bpmn20.xml" })
+    public void testTaskListenerTypeScriptSyntaxErrorInScript() {
+        Map<String, Object> vars = new HashMap<>();
+        assertThatThrownBy(()->runtimeService.startProcessInstanceByKey("testProcessErrorInScript", vars))
+                .isInstanceOf(FlowableScriptEvaluationException.class)
+                .hasMessageContaining("processDefinitionKey=testProcessErrorInScript")
+                .hasMessageContaining("taskDefinitionKey=p4usertask1");
+        ;
     }
 }

@@ -15,6 +15,7 @@ package org.flowable.common.engine.impl.scripting;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.script.Bindings;
 import javax.script.ScriptContext;
@@ -30,9 +31,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * Manages and provides access to JSR-223 {@link ScriptEngine ScriptEngines}.
+ *
+ * <p>
+ * ScriptEngines are attempted to be cached by default, if the ScriptEngines
+ * factory parameter {@link ScriptEngineFactory#getParameter(String) THREADING parameter}
+ * indicates thread safe read access.
+ * </p>
+ *
  * @author Tom Baeyens
  * @author Joram Barrez
  * @author Frederik Heremans
+ * @author Arthur Hupka-Merle
+ * @see ScriptEngineManager
  */
 public class ScriptingEngines {
 
@@ -47,6 +58,11 @@ public class ScriptingEngines {
     protected boolean cacheScriptingEngines = true;
     protected Map<String, ScriptEngine> cachedEngines;
 
+    protected ScriptTraceEnhancer defaultTraceEnhancer;
+
+    protected ScriptEvaluationExceptionHandler exceptionHandler = new DefaultExceptionHandler();
+    protected ScriptTraceListener scriptTraceListener = null;
+
     public ScriptingEngines(ScriptBindingsFactory scriptBindingsFactory) {
         this(new ScriptEngineManager());
         this.scriptBindingsFactory = scriptBindingsFactory;
@@ -59,7 +75,7 @@ public class ScriptingEngines {
 
     public ScriptEvaluation evaluate(ScriptEngineRequest request) {
         Bindings bindings = createBindings(request);
-        Object result = evaluate(request.getScript(), request.getLanguage(), bindings);
+        Object result = evaluate(request, bindings);
         return new ScriptEvaluationImpl(bindings, result);
     }
 
@@ -84,21 +100,56 @@ public class ScriptingEngines {
         return evaluate(builder.build()).getResult();
     }
 
-    protected Object evaluate(String script, String language, Bindings bindings) {
-        ScriptEngine scriptEngine = getEngineByName(language);
-        return evaluate(scriptEngine, script, bindings);
+    protected Object evaluate(ScriptEngineRequest request, Bindings bindings) {
+        ScriptEngine scriptEngine = getEngineByName(request.getLanguage());
+        return evaluate(scriptEngine, request, bindings);
     }
 
-    protected Object evaluate(ScriptEngine scriptEngine, String script, Bindings bindings) {
+    protected Object evaluate(ScriptEngine scriptEngine, ScriptEngineRequest request, Bindings bindings) {
+        long startMillis = System.currentTimeMillis();
         try {
-            return scriptEngine.eval(script, bindings);
-        } catch (ScriptException e) {
-            Throwable rootCause = ExceptionUtils.getRootCause(e);
-            if (rootCause instanceof FlowableException) {
-                throw (FlowableException) rootCause;
+            Object scriptResult = scriptEngine.eval(request.getScript(), bindings);
+            if ("juel".equalsIgnoreCase(request.getLanguage()) && (scriptResult instanceof String) && request.getScript().equals(scriptResult.toString())) {
+                throw new JuelEvaluationException(String.format("Expression \"%s\" failed to be evaluated.", request.getScript()));
             }
-            LOGGER.debug("Problem evaluating script: {}{}{}", e.getMessage(), System.lineSeparator(), script);
-            throw new FlowableException("problem evaluating script: " + e.getMessage(), e);
+            if (scriptTraceListener != null && scriptTraceListener.shouldBeTraced(request, false)) {
+                long endMillis = System.currentTimeMillis();
+                DefaultScriptTrace scriptTrace = DefaultScriptTrace.successTrace(startMillis, endMillis, request);
+                enhanceScriptTrace(request, scriptTrace);
+                notifyScriptTraceListener(request, scriptTrace, false);
+            }
+            return scriptResult;
+        } catch (ScriptException e) {
+            long endMillis = System.currentTimeMillis();
+            String errorId = UUID.randomUUID().toString();
+            if (LOGGER.isTraceEnabled()) {
+                // Make sure to log the exception in any case on trace level, even when the exception handler decides not to log.
+                LOGGER.trace("Caught exception evaluating script. ErrorId: {} {}{}{}", errorId, request.getLanguage(), System.lineSeparator(),
+                        request.getScript());
+            }
+            DefaultScriptTrace scriptTrace = DefaultScriptTrace.errorTrace(startMillis, endMillis, errorId, request, e);
+            enhanceScriptTrace(request, scriptTrace);
+            if (scriptTraceListener != null && scriptTraceListener.shouldBeTraced(request, true)){
+                notifyScriptTraceListener(request, scriptTrace, true);
+            }
+            return this.exceptionHandler.handleException(scriptTrace, e);
+        }
+    }
+
+    protected void notifyScriptTraceListener(ScriptEngineRequest request, ScriptTrace scriptTrace, boolean errorTrace) {
+        try {
+            scriptTraceListener.onScriptTrace(scriptTrace);
+        } catch (Exception e) {
+            LOGGER.warn("Exception while executing scriptTraceListener: {}", e.getMessage(), e);
+        }
+    }
+
+    protected void enhanceScriptTrace(ScriptEngineRequest request, DefaultScriptTrace scriptTrace) {
+        if (defaultTraceEnhancer != null) {
+            defaultTraceEnhancer.enhanceScriptTrace(scriptTrace);
+        }
+        if (request.getTraceEnhancer() != null) {
+            request.getTraceEnhancer().enhanceScriptTrace(scriptTrace);
         }
     }
 
@@ -186,4 +237,55 @@ public class ScriptingEngines {
         return cacheScriptingEngines;
     }
 
+    public ScriptTraceEnhancer getDefaultTraceEnhancer() {
+        return defaultTraceEnhancer;
+    }
+
+    public void setDefaultTraceEnhancer(ScriptTraceEnhancer defaultTraceEnhancer) {
+        this.defaultTraceEnhancer = defaultTraceEnhancer;
+    }
+
+    public ScriptEvaluationExceptionHandler getExceptionHandler() {
+        return exceptionHandler;
+    }
+
+    public void setExceptionHandler(ScriptEvaluationExceptionHandler exceptionHandler) {
+        this.exceptionHandler = exceptionHandler;
+    }
+
+    public ScriptTraceListener getScriptTraceListener() {
+        return scriptTraceListener;
+    }
+
+    public void setScriptTraceListener(ScriptTraceListener scriptTraceListener) {
+        this.scriptTraceListener = scriptTraceListener;
+    }
+
+    /**
+     * Thrown, when juel evaluation failed. Used internally only to enforce
+     * the same error handling for juel too.
+     */
+    protected static class JuelEvaluationException extends ScriptException {
+
+        public JuelEvaluationException(String s) {
+            super(s);
+        }
+    }
+
+    public static class DefaultExceptionHandler implements ScriptEvaluationExceptionHandler {
+        @Override
+        public Object handleException(ScriptTrace errorTrace, Throwable scriptException) {
+            Throwable rootCause = ExceptionUtils.getRootCause(scriptException);
+            if (rootCause instanceof FlowableException) {
+                throw (FlowableException) rootCause;
+            }
+            if (errorTrace.getException() != null) {
+                FlowableScriptEvaluationException exception = new FlowableScriptEvaluationException(errorTrace, errorTrace.getException());
+                LOGGER.debug("{}{}{}", exception.getMessage(), System.lineSeparator(), errorTrace.getRequest().getScript(),
+                        errorTrace.getException());
+                throw exception;
+            }
+            return null;
+        }
+    }
 }
