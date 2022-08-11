@@ -47,6 +47,7 @@ public class DefaultScriptTrace implements EnhanceableScriptTrace, ScriptTrace {
         return this;
     }
 
+    @Override
     public String getUuid() {
         return uuid;
     }
