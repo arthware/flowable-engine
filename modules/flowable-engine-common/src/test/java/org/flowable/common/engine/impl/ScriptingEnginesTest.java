@@ -14,7 +14,6 @@ package org.flowable.common.engine.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.entry;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -26,6 +25,7 @@ import org.flowable.common.engine.impl.scripting.ResolverFactory;
 import org.flowable.common.engine.impl.scripting.ScriptBindingsFactory;
 import org.flowable.common.engine.impl.scripting.ScriptEngineRequest;
 import org.flowable.common.engine.impl.scripting.ScriptTrace;
+import org.flowable.common.engine.impl.scripting.ScriptTrace.TraceTag;
 import org.flowable.common.engine.impl.scripting.ScriptTraceListener;
 import org.flowable.common.engine.impl.scripting.ScriptingEngines;
 import org.flowable.variable.api.delegate.VariableScope;
@@ -142,7 +142,7 @@ public class ScriptingEnginesTest {
         assertThatThrownBy(() -> engines.evaluate(request))
                 .isInstanceOfSatisfying(FlowableScriptEvaluationException.class, ex -> {
                     ScriptTrace errorTrace = ex.getErrorTrace();
-                    assertThat(errorTrace.getTraceTags()).containsExactly(entry("global", "foo"), entry("requestSpecific", "bar"));
+                    assertThat(errorTrace.getTraceTags()).containsExactly(TraceTag.tag("global", "foo"), TraceTag.tag("requestSpecific", "bar"));
                     assertThat(ex.getMessage()).contains("MyError", "global=foo", "requestSpecific=bar");
                 });
     }
@@ -172,7 +172,7 @@ public class ScriptingEnginesTest {
         // THEN
         assertThat(capturedTrace).describedAs("expected only error request to have been captured")
                 .singleElement().satisfies(c -> {
-                    assertThat(c.getTraceTags()).containsExactly(entry("global", "foo"), entry("requestSpecific", "bar"));
+                    assertThat(c.getTraceTags()).containsExactly(TraceTag.tag("global", "foo"), TraceTag.tag("requestSpecific", "bar"));
                     assertThat(c.getException()).isNotNull();
                     assertThat(c.hasException()).isTrue();
                 });
@@ -215,13 +215,13 @@ public class ScriptingEnginesTest {
         // THEN
         assertThat(capturedTrace).hasSize(2);
         assertThat(capturedTrace.get(0)).satisfies(c -> {
-            assertThat(c.getTraceTags()).containsExactly(entry("global", "foo"), entry("requestSpecific", "bar"));
+            assertThat(c.getTraceTags()).containsExactly(TraceTag.tag("global", "foo"), TraceTag.tag("requestSpecific", "bar"));
             assertThat(c.getException()).isNotNull();
             assertThat(c.hasException()).isTrue();
         });
 
         assertThat(capturedTrace.get(1)).satisfies(c -> {
-            assertThat(c.getTraceTags()).containsExactly(entry("global", "foo"));
+            assertThat(c.getTraceTags()).containsExactly(TraceTag.tag("global", "foo"));
             assertThat(c.getException()).isNull();
             assertThat(c.hasException()).isFalse();
         });
@@ -245,7 +245,7 @@ public class ScriptingEnginesTest {
         // THEN
         assertThat(result).isNull();
         assertThat(capturedTrace).singleElement().satisfies(c -> {
-            assertThat(c.getTraceTags()).containsExactly(entry("requestSpecific", "bar"));
+            assertThat(c.getTraceTags()).containsExactly(TraceTag.tag("requestSpecific", "bar"));
             assertThat(c.getException()).isNotNull();
             assertThat(c.hasException()).isTrue();
         });

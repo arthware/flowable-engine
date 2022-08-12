@@ -13,7 +13,8 @@
 package org.flowable.common.engine.impl.scripting;
 
 import java.time.Duration;
-import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * Captures meta information about a script invocatioon, like the start time,
@@ -30,7 +31,7 @@ public interface ScriptTrace {
 
     Throwable getException();
 
-    Map<String, Object> getTraceTags();
+    Set<TraceTag> getTraceTags();
 
     long geStartTimeMillis();
 
@@ -40,5 +41,76 @@ public interface ScriptTrace {
         return getException() != null;
     }
 
+    static class TraceTag {
+        private final boolean idTag;
+        private final String key;
+        private final String value;
+
+        protected TraceTag(boolean uniqueId, String key, String value) {
+            this.idTag = uniqueId;
+            this.key = key;
+            this.value = value;
+        }
+
+        /**
+         * Id tags should be used when this tag
+         * holds a unique identifier like a UUID or a database sequence value.
+         *
+         * Those tags won't be used for metrics.
+         * @param key the tagKey
+         * @param value the tag value
+         * @return the unique id tag
+         */
+        public static TraceTag idTag(String key, String value) {
+            return new TraceTag(true, key, value);
+        }
+
+        /**
+         * Tags should be used, when this TraceTag can be used as
+         * classifier e.g. when the value does not hold any unique entity
+         * id but allows to classify invocations in a finite set of tuples.
+         * <p>
+         * Those tags can be used to tag metrics.
+         * </p>
+         * @param key the tagKey
+         * @param value the tag value
+         * @return the classifier tag
+         */
+        public static TraceTag tag(String key, String value) {
+            return new TraceTag(false, key, value);
+        }
+
+        public boolean isIdTag() {
+            return idTag;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("%s=%s", key, value);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
+            TraceTag traceTag = (TraceTag) o;
+            return idTag == traceTag.idTag && key.equals(traceTag.key) && value.equals(traceTag.value);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(idTag, key, value);
+        }
+    }
 
 }

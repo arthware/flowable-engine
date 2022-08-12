@@ -12,8 +12,8 @@
  */
 package org.flowable.common.engine.impl.scripting;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.flowable.common.engine.api.FlowableException;
@@ -35,10 +35,11 @@ public class FlowableScriptEvaluationException extends FlowableException {
 
     protected static String createErrorMessage(ScriptTrace trace) {
         StringBuilder b = new StringBuilder();
-        Map<String, Object> traceTags = trace.getTraceTags();
+        Set<ScriptTrace.TraceTag> traceTags = trace.getTraceTags();
         if (trace.getUuid() != null) {
-            traceTags = new LinkedHashMap<>(trace.getTraceTags());
-            traceTags.put("errorId", trace.getUuid());
+            traceTags = new LinkedHashSet<>(trace.getTraceTags());
+            // append the errorId at the end of the message
+            traceTags.add(ScriptTrace.TraceTag.idTag("errorId", trace.getUuid()));
         }
         b.append(trace.getRequest().getLanguage());
         b.append(" script evaluation failed: ");
@@ -48,7 +49,7 @@ public class FlowableScriptEvaluationException extends FlowableException {
 
         if (!traceTags.isEmpty()) {
             b.append(" Trace: ");
-            b.append(traceTags.entrySet().stream()
+            b.append(traceTags.stream()
                     .filter(e->e.getValue() != null)
                     .map(k -> k.getKey() + "=" + k.getValue())
                     .collect(Collectors.joining(",")));

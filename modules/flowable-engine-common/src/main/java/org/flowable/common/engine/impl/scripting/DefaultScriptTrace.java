@@ -13,8 +13,8 @@
 package org.flowable.common.engine.impl.scripting;
 
 import java.time.Duration;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 public class DefaultScriptTrace implements EnhanceableScriptTrace, ScriptTrace {
 
@@ -23,7 +23,7 @@ public class DefaultScriptTrace implements EnhanceableScriptTrace, ScriptTrace {
     protected String uuid;
     protected ScriptEngineRequest request;
     protected Throwable exception;
-    protected Map<String, Object> traceTags = new LinkedHashMap<>();
+    protected Set<TraceTag> traceTags = new LinkedHashSet<>();
 
     public DefaultScriptTrace(long startTimeMillis, long endTimeMillis, String uuid, ScriptEngineRequest request, Throwable caughtException) {
         this.startTimeMillis = startTimeMillis;
@@ -42,8 +42,8 @@ public class DefaultScriptTrace implements EnhanceableScriptTrace, ScriptTrace {
     }
 
     @Override
-    public EnhanceableScriptTrace addTraceTag(String key, Object value) {
-        this.traceTags.put(key, value);
+    public EnhanceableScriptTrace addTraceTag(TraceTag tag) {
+        this.traceTags.add(tag);
         return this;
     }
 
@@ -63,7 +63,7 @@ public class DefaultScriptTrace implements EnhanceableScriptTrace, ScriptTrace {
     }
 
     @Override
-    public Map<String, Object> getTraceTags() {
+    public Set<TraceTag> getTraceTags() {
         return traceTags;
     }
 
