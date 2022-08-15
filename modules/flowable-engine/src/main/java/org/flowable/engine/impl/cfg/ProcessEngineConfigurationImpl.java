@@ -798,12 +798,6 @@ public abstract class ProcessEngineConfigurationImpl extends ProcessEngineConfig
     protected Collection<ELResolver> preBeanELResolvers;
     protected Collection<ELResolver> postDefaultELResolvers;
     protected List<String> customScriptingEngineClasses;
-    protected ScriptingEngines scriptingEngines;
-    protected ScriptBindingsFactory scriptBindingsFactory;
-    protected List<ResolverFactory> resolverFactories;
-    protected Collection<ResolverFactory> preDefaultResolverFactories;
-    protected Collection<ResolverFactory> postDefaultResolverFactories;
-
     protected boolean isExpressionCacheEnabled = true;
     protected int expressionCacheSize = 4096;
     protected int expressionTextLengthCacheLimit = -1; // negative value to have no max length
@@ -987,8 +981,8 @@ public abstract class ProcessEngineConfigurationImpl extends ProcessEngineConfig
         initVariableTypes();
         initFormEngines();
         initFormTypes();
-        initScriptBindingsFactory();
-        initScriptingEngines();
+        setDefaultScriptTraceEnhancer(new ProcessEngineScriptTraceEnhancer());
+        initScriptingEngines(new VariableScopeResolverFactory(), new BeansResolverFactory());
         initBusinessCalendarManager();
         initServices();
         initWsdlImporterFactory();
@@ -2487,8 +2481,7 @@ public abstract class ProcessEngineConfigurationImpl extends ProcessEngineConfig
             if (preDefaultResolverFactories != null) {
                 resolverFactories.addAll(preDefaultResolverFactories);
             }
-            resolverFactories.add(new VariableScopeResolverFactory());
-            resolverFactories.add(new BeansResolverFactory());
+
             if (postDefaultResolverFactories != null) {
                 resolverFactories.addAll(postDefaultResolverFactories);
             }
@@ -3737,47 +3730,6 @@ public abstract class ProcessEngineConfigurationImpl extends ProcessEngineConfig
 
     public List<ResolverFactory> getResolverFactories() {
         return resolverFactories;
-    }
-
-    public ProcessEngineConfigurationImpl setResolverFactories(List<ResolverFactory> resolverFactories) {
-        this.resolverFactories = resolverFactories;
-        return this;
-    }
-
-    public Collection<ResolverFactory> getPreDefaultResolverFactories() {
-        return preDefaultResolverFactories;
-    }
-
-    public ProcessEngineConfigurationImpl setPreDefaultResolverFactories(Collection<ResolverFactory> preDefaultResolverFactories) {
-        this.preDefaultResolverFactories = preDefaultResolverFactories;
-        return this;
-    }
-
-    public ProcessEngineConfigurationImpl addPreDefaultResolverFactory(ResolverFactory resolverFactory) {
-        if (this.preDefaultResolverFactories == null) {
-            this.preDefaultResolverFactories = new ArrayList<>();
-        }
-
-        this.preDefaultResolverFactories.add(resolverFactory);
-        return this;
-    }
-
-    public Collection<ResolverFactory> getPostDefaultResolverFactories() {
-        return postDefaultResolverFactories;
-    }
-
-    public ProcessEngineConfigurationImpl setPostDefaultResolverFactories(Collection<ResolverFactory> postDefaultResolverFactories) {
-        this.postDefaultResolverFactories = postDefaultResolverFactories;
-        return this;
-    }
-
-    public ProcessEngineConfigurationImpl addPostDefaultResolverFactory(ResolverFactory resolverFactory) {
-        if (this.postDefaultResolverFactories == null) {
-            this.postDefaultResolverFactories = new ArrayList<>();
-        }
-
-        this.postDefaultResolverFactories.add(resolverFactory);
-        return this;
     }
 
     public DeploymentManager getDeploymentManager() {

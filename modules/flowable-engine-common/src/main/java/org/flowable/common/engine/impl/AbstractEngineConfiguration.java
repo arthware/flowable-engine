@@ -22,6 +22,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -118,6 +119,12 @@ import org.flowable.common.engine.impl.persistence.entity.data.PropertyDataManag
 import org.flowable.common.engine.impl.persistence.entity.data.impl.MybatisByteArrayDataManager;
 import org.flowable.common.engine.impl.persistence.entity.data.impl.MybatisPropertyDataManager;
 import org.flowable.common.engine.impl.runtime.Clock;
+import org.flowable.common.engine.impl.scripting.BeansResolverFactory;
+import org.flowable.common.engine.impl.scripting.ResolverFactory;
+import org.flowable.common.engine.impl.scripting.ScriptBindingsFactory;
+import org.flowable.common.engine.impl.scripting.ScriptTraceEnhancer;
+import org.flowable.common.engine.impl.scripting.ScriptTraceListener;
+import org.flowable.common.engine.impl.scripting.ScriptingEngines;
 import org.flowable.common.engine.impl.service.CommonEngineServiceImpl;
 import org.flowable.common.engine.impl.util.DefaultClockImpl;
 import org.flowable.common.engine.impl.util.IoUtil;
@@ -261,9 +268,9 @@ public abstract class AbstractEngineConfiguration {
 
     /**
      * Flag that can be set to configure or not a relational database is used. This is useful for custom implementations that do not use relational databases at all.
-     *
+     * <p>
      * If true (default), the {@link AbstractEngineConfiguration#getDatabaseSchemaUpdate()} value will be used to determine what needs to happen wrt the database schema.
-     *
+     * <p>
      * If false, no validation or schema creation will be done. That means that the database schema must have been created 'manually' before but the engine does not validate whether the schema is
      * correct. The {@link AbstractEngineConfiguration#getDatabaseSchemaUpdate()} value will not be used.
      */
@@ -363,6 +370,16 @@ public abstract class AbstractEngineConfiguration {
     protected List<EngineConfigurator> allConfigurators; // Including auto-discovered configurators
     protected EngineConfigurator idmEngineConfigurator;
     protected EngineConfigurator eventRegistryConfigurator;
+
+    // SCRIPTING SUPPORT ///////////////////////////////////////////////
+
+    protected ScriptingEngines scriptingEngines;
+    protected ScriptBindingsFactory scriptBindingsFactory;
+    protected List<ResolverFactory> resolverFactories;
+    protected Collection<ResolverFactory> preDefaultResolverFactories;
+    protected Collection<ResolverFactory> postDefaultResolverFactories;
+    protected ScriptTraceEnhancer defaultScriptTraceEnhancer;
+    protected ScriptTraceListener scriptTraceListener;
 
     public static final String PRODUCT_NAME_POSTGRES = "PostgreSQL";
     public static final String PRODUCT_NAME_CRDB = "CockroachDB";
@@ -1853,10 +1870,40 @@ public abstract class AbstractEngineConfiguration {
         }
     }
 
+    protected void initScriptBindingsFactory(ResolverFactory... engineDefaultResolverFactories) {
+        if (resolverFactories == null) {
+            resolverFactories = new ArrayList<>();
+            if (preDefaultResolverFactories != null) {
+                resolverFactories.addAll(preDefaultResolverFactories);
+            }
+            if (engineDefaultResolverFactories != null) {
+                Arrays.asList(engineDefaultResolverFactories).forEach(resolverFactories::add);
+            }
+            if (postDefaultResolverFactories != null) {
+                resolverFactories.addAll(postDefaultResolverFactories);
+            }
+        }
+        if (scriptBindingsFactory == null) {
+            scriptBindingsFactory = new ScriptBindingsFactory(this, resolverFactories);
+        }
+    }
+
+    protected ScriptingEngines initScriptingEngines(ResolverFactory... engineDefaultResolverFactories) {
+        if (scriptBindingsFactory == null) {
+            initScriptBindingsFactory(engineDefaultResolverFactories);
+        }
+        if (scriptingEngines == null) {
+            scriptingEngines = new ScriptingEngines(scriptBindingsFactory);
+            scriptingEngines.setDefaultTraceEnhancer(this.defaultScriptTraceEnhancer);
+            scriptingEngines.setScriptTraceListener(this.scriptTraceListener);
+        }
+        return this.scriptingEngines;
+    }
+
     public boolean isLoggingSessionEnabled() {
         return loggingListener != null;
     }
-    
+
     public LoggingListener getLoggingListener() {
         return loggingListener;
     }
@@ -2052,5 +2099,65 @@ public abstract class AbstractEngineConfiguration {
 
     public boolean isForceCloseMybatisConnectionPool() {
         return forceCloseMybatisConnectionPool;
+    }
+
+    public List<ResolverFactory> getResolverFactories() {
+        return resolverFactories;
+    }
+
+    public void setResolverFactories(List<ResolverFactory> resolverFactories) {
+        this.resolverFactories = resolverFactories;
+    }
+
+    public Collection<ResolverFactory> getPreDefaultResolverFactories() {
+        return preDefaultResolverFactories;
+    }
+
+    public AbstractEngineConfiguration setPreDefaultResolverFactories(Collection<ResolverFactory> preDefaultResolverFactories) {
+        this.preDefaultResolverFactories = preDefaultResolverFactories;
+        return this;
+    }
+
+    public AbstractEngineConfiguration addPreDefaultResolverFactory(ResolverFactory resolverFactory) {
+        if (this.preDefaultResolverFactories == null) {
+            this.preDefaultResolverFactories = new ArrayList<>();
+        }
+
+        this.preDefaultResolverFactories.add(resolverFactory);
+        return this;
+    }
+
+    public Collection<ResolverFactory> getPostDefaultResolverFactories() {
+        return postDefaultResolverFactories;
+    }
+
+    public AbstractEngineConfiguration setPostDefaultResolverFactories(Collection<ResolverFactory> postDefaultResolverFactories) {
+        this.postDefaultResolverFactories = postDefaultResolverFactories;
+        return this;
+    }
+
+    public AbstractEngineConfiguration addPostDefaultResolverFactory(ResolverFactory resolverFactory) {
+        if (this.postDefaultResolverFactories == null) {
+            this.postDefaultResolverFactories = new ArrayList<>();
+        }
+
+        this.postDefaultResolverFactories.add(resolverFactory);
+        return this;
+    }
+
+    public ScriptTraceEnhancer getDefaultScriptTraceEnhancer() {
+        return defaultScriptTraceEnhancer;
+    }
+
+    public void setDefaultScriptTraceEnhancer(ScriptTraceEnhancer defaultScriptTraceEnhancer) {
+        this.defaultScriptTraceEnhancer = defaultScriptTraceEnhancer;
+    }
+
+    public ScriptTraceListener getScriptTraceListener() {
+        return scriptTraceListener;
+    }
+
+    public void setScriptTraceListener(ScriptTraceListener scriptTraceListener) {
+        this.scriptTraceListener = scriptTraceListener;
     }
 }
