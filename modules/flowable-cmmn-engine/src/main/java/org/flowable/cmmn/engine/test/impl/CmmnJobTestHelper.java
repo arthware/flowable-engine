@@ -12,13 +12,17 @@
  */
 package org.flowable.cmmn.engine.test.impl;
 
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Callable;
 
+import org.flowable.cmmn.api.CmmnManagementService;
 import org.flowable.cmmn.engine.CmmnEngine;
 import org.flowable.cmmn.engine.CmmnEngineConfiguration;
 import org.flowable.common.engine.api.FlowableException;
+import org.flowable.job.api.Job;
+import org.flowable.job.api.JobQuery;
 import org.flowable.job.service.impl.asyncexecutor.AsyncExecutor;
 
 
@@ -43,8 +47,13 @@ public class CmmnJobTestHelper {
 
             @Override
             public Boolean call() {
+                JobQuery jobQuery = cmmnEngineConfiguration.getCmmnManagementService().createJobQuery();
+                List<Job> jobs = jobQuery.list();
+                for (Job job : jobs) {
+                    System.out.println(job.getJobType() + " " + job.getCategory() + " " + job.getJobHandlerType() + " " + job.getScopeId() + " " + job.getId());
+                }
                 return cmmnEngineConfiguration.getCmmnManagementService().createJobQuery().count() > 0
-                || cmmnEngineConfiguration.getCmmnManagementService().createTimerJobQuery().count() > 0;
+                        || cmmnEngineConfiguration.getCmmnManagementService().createTimerJobQuery().count() > 0;
             }
 
         }, maxMillisToWait, intervalMillis, shutdownExecutorWhenFinished);
@@ -141,6 +150,10 @@ public class CmmnJobTestHelper {
                 asyncExecutor.shutdown();
             }
         }
+    }
+
+    public static boolean areJobsAvailable(CmmnManagementService managementService) {
+        return !managementService.createJobQuery().list().isEmpty();
     }
 
     public static class InterruptTask extends TimerTask {
