@@ -12,6 +12,12 @@
  */
 package org.flowable.common.rest.exception;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
@@ -20,11 +26,18 @@ public class ErrorInfo {
     private String message;
     private String exception;
 
+    private Map<String, Object> properties;
+
     public ErrorInfo(String message, Exception ex) {
         this.message = message;
         if (ex != null) {
             this.exception = ex.getLocalizedMessage();
         }
+    }
+
+    @JsonCreator
+    ErrorInfo() {
+
     }
 
     public String getMessage() {
@@ -43,4 +56,22 @@ public class ErrorInfo {
     public String getException() {
         return exception;
     }
+
+    @JsonAnyGetter
+    public Map<String, Object> getProperties() {
+        return properties;
+    }
+
+    public void setProperties(Map<String, Object> properties) {
+        this.properties = properties;
+    }
+
+    @JsonAnySetter
+    public void setProperty(String errorContext, Object value) {
+        if (properties == null) {
+            properties = new LinkedHashMap<>();
+        }
+        properties.put(errorContext, value);
+    }
+
 }

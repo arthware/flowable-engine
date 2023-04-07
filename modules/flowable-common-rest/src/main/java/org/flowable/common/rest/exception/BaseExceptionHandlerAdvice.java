@@ -21,6 +21,7 @@ import org.flowable.common.engine.api.FlowableObjectNotFoundException;
 import org.flowable.common.engine.api.FlowableTaskAlreadyClaimedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageConversionException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -45,6 +46,9 @@ public class BaseExceptionHandlerAdvice {
      */
     protected boolean sendFullErrorException = true;
 
+    @Autowired(required = false)
+    protected ErrorInfoHandler errorInfoHandler = new DefaultErrorInfoHandler();
+
     @ResponseStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE) // 415
     @ExceptionHandler(FlowableContentNotSupportedException.class)
     @ResponseBody
@@ -56,35 +60,35 @@ public class BaseExceptionHandlerAdvice {
     @ExceptionHandler(FlowableConflictException.class)
     @ResponseBody
     public ErrorInfo handleConflict(FlowableConflictException e) {
-        return new ErrorInfo("Conflict", e);
+        return errorInfoHandler.handleErrorInfo(e, new ErrorInfo("Conflict", e));
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND) // 404
     @ExceptionHandler(FlowableObjectNotFoundException.class)
     @ResponseBody
     public ErrorInfo handleNotFound(FlowableObjectNotFoundException e) {
-        return new ErrorInfo("Not found", e);
+        return errorInfoHandler.handleErrorInfo(e, new ErrorInfo("Not found", e));
     }
 
     @ResponseStatus(HttpStatus.FORBIDDEN) // 403
     @ExceptionHandler(FlowableForbiddenException.class)
     @ResponseBody
     public ErrorInfo handleForbidden(FlowableForbiddenException e) {
-        return new ErrorInfo("Forbidden", e);
+        return errorInfoHandler.handleErrorInfo(e, new ErrorInfo("Forbidden", e));
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST) // 400
     @ExceptionHandler(FlowableIllegalArgumentException.class)
     @ResponseBody
     public ErrorInfo handleIllegalArgument(FlowableIllegalArgumentException e) {
-        return new ErrorInfo("Bad request", e);
+        return errorInfoHandler.handleErrorInfo(e, new ErrorInfo("Bad request", e));
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST) // 400
     @ExceptionHandler(FlowableIllegalStateException.class)
     @ResponseBody
     public ErrorInfo handleIllegalState(FlowableIllegalStateException e) {
-        return new ErrorInfo("Bad request", e);
+        return errorInfoHandler.handleErrorInfo(e, new ErrorInfo("Bad request", e));
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST) // 400
@@ -92,13 +96,14 @@ public class BaseExceptionHandlerAdvice {
     @ResponseBody
     public ErrorInfo handleBadMessageConversion(HttpMessageConversionException e) {
         if (sendFullErrorException) {
-            return new ErrorInfo("Bad request", e);
+            return errorInfoHandler.handleErrorInfo(e, new ErrorInfo("Bad request", e));
         } else {
             String errorIdentifier = UUID.randomUUID().toString();
             LOGGER.warn("Invalid Message conversion exception. Error ID: {}", errorIdentifier, e);
             ErrorInfo errorInfo = new ErrorInfo("Bad request", null);
             errorInfo.setException("Invalid HTTP message. Error ID: " + errorIdentifier);
-            return errorInfo;
+            errorInfo.setProperty("ErrorID", errorIdentifier);
+            return errorInfoHandler.handleErrorInfo(e, errorInfo);
         }
     }
 
@@ -106,7 +111,7 @@ public class BaseExceptionHandlerAdvice {
     @ExceptionHandler(FlowableTaskAlreadyClaimedException.class)
     @ResponseBody
     public ErrorInfo handleTaskAlreadyClaimed(FlowableTaskAlreadyClaimedException e) {
-        return new ErrorInfo("Task was already claimed", e);
+        return errorInfoHandler.handleErrorInfo(e, new ErrorInfo("Task was already claimed", e));
     }
 
     // Fall back
@@ -119,12 +124,11 @@ public class BaseExceptionHandlerAdvice {
             LOGGER.error("Unhandled exception", e);
             return new ErrorInfo("Internal server error", e);
         } else {
-
             String errorIdentifier = UUID.randomUUID().toString();
             LOGGER.error("Unhandled exception. Error ID: {}", errorIdentifier, e);
             ErrorInfo errorInfo = new ErrorInfo("Internal server error", e);
             errorInfo.setException("Error with ID: " + errorIdentifier);
-            return errorInfo;
+            return errorInfoHandler.handleErrorInfo(e, errorInfo);
         }
     }
 
@@ -134,5 +138,9 @@ public class BaseExceptionHandlerAdvice {
 
     public void setSendFullErrorException(boolean sendFullErrorException) {
         this.sendFullErrorException = sendFullErrorException;
+    }
+
+    public void setErrorInfoHandler(ErrorInfoHandler errorInfoHandler) {
+        this.errorInfoHandler = errorInfoHandler;
     }
 }

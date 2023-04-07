@@ -13,9 +13,15 @@
 package org.flowable.common.rest.exception;
 
 import static net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import org.flowable.common.engine.api.FlowableForbiddenException;
@@ -23,6 +29,7 @@ import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.common.engine.api.FlowableIllegalStateException;
 import org.flowable.common.engine.api.FlowableObjectNotFoundException;
 import org.flowable.common.engine.api.FlowableTaskAlreadyClaimedException;
+import org.flowable.common.engine.api.error.ClientErrorEnhancer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +37,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * @author Filip Hrisafov
@@ -350,6 +361,66 @@ class BaseExceptionHandlerAdviceTest {
                 .inPath("exception").asString().startsWith("Error with ID: ");
     }
 
+    @Test
+    void handleErrorPropertiesProvidingExceptionWithJson() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode errorDetailsNode = mapper.createObjectNode();
+        ArrayNode arrayNode = errorDetailsNode.putArray("invalidFields");
+        arrayNode.add(mapper.createObjectNode().put("field", "firstName").put("reason", "min length must be 2"));
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("simpleString", "invalid");
+        properties.put("failedValidation", errorDetailsNode);
+
+        testController.exceptionSupplier = () -> new ErrorPropertyProvidingException("Validation failed", properties);
+        handlerAdvice.setSendFullErrorException(false);
+
+        String body = mockMvc.perform(get("/"))
+                .andExpect(status().isBadRequest())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThatJson(body)
+                .isEqualTo("{"
+                        + "  message: 'Bad request',"
+                        + "  exception: 'Validation failed',"
+                        + "  simpleString: 'invalid',"
+                        + "  failedValidation: {"
+                        + "    invalidFields: [{field: 'firstName', reason: 'min length must be 2'}]"
+                        + "  }"
+                        + "}");
+
+        ErrorInfo errorInfo = new ObjectMapper().readValue(body, ErrorInfo.class);
+        assertThat(errorInfo.getException()).isEqualTo("Validation failed");
+        assertThat(errorInfo.getMessage()).isEqualTo("Bad request");
+        assertThat(errorInfo.getProperties()).containsKey("failedValidation");
+    }
+
+    @Test
+    void handleErrorPropertiesProvidingExceptionWithList() throws Exception {
+        List<String> strings = Arrays.asList("msg1", "msg2");
+        testController.exceptionSupplier = () -> new ErrorPropertyProvidingException("Validation failed", strings);
+        handlerAdvice.setSendFullErrorException(false);
+
+        String body = mockMvc.perform(get("/"))
+                .andExpect(status().isBadRequest())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThatJson(body)
+                .isEqualTo("{"
+                        + "  message: 'Bad request',"
+                        + "  exception: 'Validation failed',"
+                        + "  errorProperty: ['msg1', 'msg2']"
+                        + "}");
+
+        ErrorInfo errorInfo = new ObjectMapper().readValue(body, ErrorInfo.class);
+        assertThat(errorInfo.getException()).isEqualTo("Validation failed");
+        assertThat(errorInfo.getMessage()).isEqualTo("Bad request");
+        assertThat(errorInfo.getProperties()).containsEntry("errorProperty", strings);
+    }
+
     @RestController
     static class TestController {
 
@@ -360,5 +431,26 @@ class BaseExceptionHandlerAdviceTest {
             throw exceptionSupplier.get();
         }
 
+    }
+
+    static class ErrorPropertyProvidingException extends FlowableIllegalArgumentException implements ClientErrorEnhancer {
+
+        Object properties;
+
+        public ErrorPropertyProvidingException(String message, Object properties) {
+            super(message);
+            this.properties = properties;
+        }
+
+        @Override
+        public void enhanceErrorPayload(BiConsumer<String, Object> errorProperties) {
+            if (properties instanceof Map) {
+                for (Map.Entry<String, Object> entry : ((Map<String, Object>) properties).entrySet()) {
+                    errorProperties.accept(entry.getKey(), entry.getValue());
+                }
+            } else {
+                errorProperties.accept("errorProperty", properties);
+            }
+        }
     }
 }
