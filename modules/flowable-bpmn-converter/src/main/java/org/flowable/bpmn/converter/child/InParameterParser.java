@@ -19,10 +19,10 @@ import javax.xml.stream.XMLStreamReader;
 
 import org.apache.commons.lang3.StringUtils;
 import org.flowable.bpmn.converter.util.BpmnXMLUtil;
+import org.flowable.bpmn.model.Activity;
 import org.flowable.bpmn.model.BaseElement;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.CallActivity;
-import org.flowable.bpmn.model.CaseServiceTask;
 import org.flowable.bpmn.model.Event;
 import org.flowable.bpmn.model.ExtensionAttribute;
 import org.flowable.bpmn.model.IOParameter;
@@ -53,26 +53,18 @@ public class InParameterParser extends BaseChildElementParser {
         String target = xtr.getAttributeValue(null, ATTRIBUTE_IOPARAMETER_TARGET);
         if ((StringUtils.isNotEmpty(source) || StringUtils.isNotEmpty(sourceExpression)) && StringUtils.isNotEmpty(target)) {
 
-            IOParameter parameter = new IOParameter();
-            if (StringUtils.isNotEmpty(sourceExpression)) {
-                parameter.setSourceExpression(sourceExpression);
-            } else {
-                parameter.setSource(source);
-            }
-
-            parameter.setTarget(target);
-
-            String transientValue = xtr.getAttributeValue(null, ATTRIBUTE_IOPARAMETER_TRANSIENT);
-            if ("true".equalsIgnoreCase(transientValue)) {
-                parameter.setTransient(true);
-            }
-
-            if (parentElement instanceof CallActivity) {
-                ((CallActivity) parentElement).getInParameters().add(parameter);
-
-            } else if (parentElement instanceof CaseServiceTask) {
-                ((CaseServiceTask) parentElement).getInParameters().add(parameter);
-
+            String transientFlag = xtr.getAttributeValue(null, ATTRIBUTE_IOPARAMETER_TRANSIENT);
+            IOParameter parameter = createIoParameter(source, sourceExpression, target, transientFlag);
+            parameter.setValidate("true".equalsIgnoreCase(xtr.getAttributeValue(null, "validate")));
+            parameter.setValidate("true".equalsIgnoreCase(xtr.getAttributeValue(null, "validate")));
+            parameter.setCopyByReference("true".equalsIgnoreCase(xtr.getAttributeValue(null, "copyByReference")));
+            parameter.setTargetTypeModelKey(xtr.getAttributeValue(null, "targetTypeModelKey"));
+            parameter.setTargetTypeName(xtr.getAttributeValue(null, "targetTypeName"));
+            parameter.setSourceTypeModelKey(xtr.getAttributeValue(null, "targetTypeModelKey"));
+            parameter.setSourceTypeName(xtr.getAttributeValue(null, "sourceTypeName"));
+            parameter.setRequired("true".equalsIgnoreCase(xtr.getAttributeValue(null, "required")));
+            if (parentElement instanceof Activity) {
+                ((Activity) parentElement).getInParameters().add(parameter);
             } else if (parentElement instanceof Event) {
                 ((Event) parentElement).getInParameters().add(parameter);
             }
@@ -101,5 +93,21 @@ public class InParameterParser extends BaseChildElementParser {
 
         }
 
+    }
+
+    protected static IOParameter createIoParameter(String source, String sourceExpression, String target, String transientValue) {
+        IOParameter parameter = new IOParameter();
+        if (StringUtils.isNotEmpty(sourceExpression)) {
+            parameter.setSourceExpression(sourceExpression);
+        } else {
+            parameter.setSource(source);
+        }
+
+        parameter.setTarget(target);
+
+        if ("true".equalsIgnoreCase(transientValue)) {
+            parameter.setTransient(true);
+        }
+        return parameter;
     }
 }

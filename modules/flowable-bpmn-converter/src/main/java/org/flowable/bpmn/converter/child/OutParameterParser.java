@@ -19,6 +19,7 @@ import javax.xml.stream.XMLStreamReader;
 
 import org.apache.commons.lang3.StringUtils;
 import org.flowable.bpmn.converter.util.BpmnXMLUtil;
+import org.flowable.bpmn.model.Activity;
 import org.flowable.bpmn.model.BaseElement;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.CallActivity;
@@ -46,26 +47,21 @@ public class OutParameterParser extends BaseChildElementParser {
         String source = xtr.getAttributeValue(null, ATTRIBUTE_IOPARAMETER_SOURCE);
         String sourceExpression = xtr.getAttributeValue(null, ATTRIBUTE_IOPARAMETER_SOURCE_EXPRESSION);
         String target = xtr.getAttributeValue(null, ATTRIBUTE_IOPARAMETER_TARGET);
-        if ((StringUtils.isNotEmpty(source) || StringUtils.isNotEmpty(sourceExpression)) && StringUtils.isNotEmpty(target)) {
+        String targetExpression = xtr.getAttributeValue(null, ATTRIBUTE_IOPARAMETER_TARGET);
+        if ((StringUtils.isNotEmpty(source) || StringUtils.isNotEmpty(sourceExpression)) && (StringUtils.isNotEmpty(target) || (StringUtils.isNotEmpty(targetExpression)))) {
 
-            IOParameter parameter = new IOParameter();
-            if (StringUtils.isNotEmpty(sourceExpression)) {
-                parameter.setSourceExpression(sourceExpression);
-            } else {
-                parameter.setSource(source);
-            }
-
-            parameter.setTarget(target);
-
-            String transientValue = xtr.getAttributeValue(null, ATTRIBUTE_IOPARAMETER_TRANSIENT);
-            if ("true".equalsIgnoreCase(transientValue)) {
-                parameter.setTransient(true);
-            }
-
+            String transientFlag = xtr.getAttributeValue(null, ATTRIBUTE_IOPARAMETER_TRANSIENT);
+            IOParameter parameter = InParameterParser.createIoParameter(source, sourceExpression, target, transientFlag);
+            parameter.setCopyByReference("true".equalsIgnoreCase(xtr.getAttributeValue(null, "copyByReference")));
+            parameter.setTargetTypeModelKey(xtr.getAttributeValue(null, "targetTypeModelKey"));
+            parameter.setTargetTypeName(xtr.getAttributeValue(null, "targetTypeName"));
+            parameter.setSourceTypeModelKey(xtr.getAttributeValue(null, "targetTypeModelKey"));
+            parameter.setSourceTypeName(xtr.getAttributeValue(null, "sourceTypeName"));
+            parameter.setRequired("true".equalsIgnoreCase(xtr.getAttributeValue(null, "required")));
             BpmnXMLUtil.addCustomAttributes(xtr, parameter, defaultOutParameterAttributes);
 
-            if (parentElement instanceof CallActivity) {
-                CallActivity callActivity = (CallActivity) parentElement;
+            if (parentElement instanceof Activity) {
+                Activity callActivity = (Activity) parentElement;
                 callActivity.getOutParameters().add(parameter);
 
             } else if (parentElement instanceof CaseServiceTask) {

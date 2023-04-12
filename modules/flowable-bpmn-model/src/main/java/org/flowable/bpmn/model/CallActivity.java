@@ -59,22 +59,6 @@ public class CallActivity extends Activity {
         this.sameDeployment = sameDeployment;
     }
 
-    public List<IOParameter> getInParameters() {
-        return inParameters;
-    }
-
-    public void setInParameters(List<IOParameter> inParameters) {
-        this.inParameters = inParameters;
-    }
-
-    public List<IOParameter> getOutParameters() {
-        return outParameters;
-    }
-
-    public void setOutParameters(List<IOParameter> outParameters) {
-        this.outParameters = outParameters;
-    }
-    
     public String getProcessInstanceName() {
         return processInstanceName;
     }
@@ -157,20 +141,6 @@ public class CallActivity extends Activity {
         setUseLocalScopeForOutParameters(otherElement.isUseLocalScopeForOutParameters());
         setCompleteAsync(otherElement.isCompleteAsync());
         setFallbackToDefaultTenant(otherElement.getFallbackToDefaultTenant());
-
-        inParameters = new ArrayList<>();
-        if (otherElement.getInParameters() != null && !otherElement.getInParameters().isEmpty()) {
-            for (IOParameter parameter : otherElement.getInParameters()) {
-                inParameters.add(parameter.clone());
-            }
-        }
-
-        outParameters = new ArrayList<>();
-        if (otherElement.getOutParameters() != null && !otherElement.getOutParameters().isEmpty()) {
-            for (IOParameter parameter : otherElement.getOutParameters()) {
-                outParameters.add(parameter.clone());
-            }
-        }
     }
 
 }

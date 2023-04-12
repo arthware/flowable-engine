@@ -13,6 +13,7 @@
 package org.flowable.bpmn.model;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -29,6 +30,9 @@ public abstract class Activity extends FlowNode {
     protected List<BoundaryEvent> boundaryEvents = new ArrayList<>();
     protected String failedJobRetryTimeCycleValue;
     protected List<MapExceptionEntry> mapExceptions = new ArrayList<>();
+
+    protected List<IOParameter> inParameters = new LinkedList<>();
+    protected List<IOParameter> outParameters = new LinkedList<>();
 
     public String getFailedJobRetryTimeCycleValue() {
         return failedJobRetryTimeCycleValue;
@@ -106,6 +110,22 @@ public abstract class Activity extends FlowNode {
         this.mapExceptions = mapExceptions;
     }
 
+    public List<IOParameter> getInParameters() {
+        return inParameters;
+    }
+
+    public void setInParameters(List<IOParameter> inParameters) {
+        this.inParameters = inParameters;
+    }
+
+    public List<IOParameter> getOutParameters() {
+        return outParameters;
+    }
+
+    public void setOutParameters(List<IOParameter> outParameters) {
+        this.outParameters = outParameters;
+    }
+
     public void setValues(Activity otherActivity) {
         super.setValues(otherActivity);
         setFailedJobRetryTimeCycleValue(otherActivity.getFailedJobRetryTimeCycleValue());
@@ -134,5 +154,19 @@ public abstract class Activity extends FlowNode {
 
         boundaryEvents.clear();
         boundaryEvents.addAll(otherActivity.getBoundaryEvents());
+
+        inParameters = new ArrayList<>();
+        if (otherActivity.getInParameters() != null && !otherActivity.getInParameters().isEmpty()) {
+            for (IOParameter parameter : otherActivity.getInParameters()) {
+                inParameters.add(parameter.clone());
+            }
+        }
+
+        outParameters = new ArrayList<>();
+        if (otherActivity.getOutParameters() != null && !otherActivity.getOutParameters().isEmpty()) {
+            for (IOParameter parameter : otherActivity.getOutParameters()) {
+                outParameters.add(parameter.clone());
+            }
+        }
     }
 }

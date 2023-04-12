@@ -23,6 +23,15 @@ public class IOParameter extends BaseElement {
     protected String targetExpression;
     protected boolean isTransient;
 
+    protected boolean validate;
+    protected boolean copyByReference;
+    protected String sourceTypeName;
+    protected String  sourceTypeModelKey;
+    protected String targetTypeName;
+    protected String targetTypeModelKey;
+
+    protected boolean required;
+
     public String getSource() {
         return source;
     }
@@ -61,6 +70,62 @@ public class IOParameter extends BaseElement {
 
     public void setTransient(boolean isTransient) {
         this.isTransient = isTransient;
+    }
+
+    public boolean isValidate() {
+        return validate;
+    }
+
+    public void setValidate(boolean validate) {
+        this.validate = validate;
+    }
+
+    public boolean isCopyByReference() {
+        return copyByReference;
+    }
+
+    public void setCopyByReference(boolean copyByReference) {
+        this.copyByReference = copyByReference;
+    }
+
+    public String getSourceTypeName() {
+        return sourceTypeName;
+    }
+
+    public void setSourceTypeName(String sourceTypeName) {
+        this.sourceTypeName = sourceTypeName;
+    }
+
+    public String getSourceTypeModelKey() {
+        return sourceTypeModelKey;
+    }
+
+    public void setSourceTypeModelKey(String sourceTypeModelKey) {
+        this.sourceTypeModelKey = sourceTypeModelKey;
+    }
+
+    public String getTargetTypeName() {
+        return targetTypeName;
+    }
+
+    public void setTargetTypeName(String targetTypeName) {
+        this.targetTypeName = targetTypeName;
+    }
+
+    public String getTargetTypeModelKey() {
+        return targetTypeModelKey;
+    }
+
+    public void setTargetTypeModelKey(String targetTypeModelKey) {
+        this.targetTypeModelKey = targetTypeModelKey;
+    }
+
+    public boolean isRequired() {
+        return required;
+    }
+
+    public void setRequired(boolean required) {
+        this.required = required;
     }
 
     @Override

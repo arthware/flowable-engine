@@ -32,7 +32,7 @@ public class JavaDelegateInvocation extends DelegateInvocation {
 
     @Override
     protected void invoke() {
-        delegateInstance.execute(execution);
+        getDelegateInstance().execute(getExecution());
     }
 
     @Override
@@ -40,4 +40,11 @@ public class JavaDelegateInvocation extends DelegateInvocation {
         return delegateInstance;
     }
 
+    public JavaDelegate getDelegateInstance() {
+        return delegateInstance;
+    }
+
+    public DelegateExecution getExecution() {
+        return execution;
+    }
 }
