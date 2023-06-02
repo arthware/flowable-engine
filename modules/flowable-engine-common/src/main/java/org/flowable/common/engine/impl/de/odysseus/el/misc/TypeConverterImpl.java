@@ -19,6 +19,7 @@ import java.beans.PropertyEditor;
 import java.beans.PropertyEditorManager;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.function.Supplier;
 
 import org.flowable.common.engine.impl.javax.el.ELException;
 
@@ -343,6 +344,12 @@ public class TypeConverterImpl implements TypeConverter {
 		}
 		if (value == null || value.getClass() == type || type.isInstance(value)) {
 			return value;
+		}
+		if (value instanceof Supplier) {
+			Object suppliedValue = ((Supplier<?>) value).get();
+			if (suppliedValue.getClass() == type || type.isInstance(suppliedValue)) {
+				return suppliedValue;
+			}
 		}
 		if (value instanceof String) {
 			return coerceStringToType((String)value, type);
