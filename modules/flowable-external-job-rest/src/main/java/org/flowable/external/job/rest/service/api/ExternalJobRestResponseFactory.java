@@ -128,7 +128,7 @@ public class ExternalJobRestResponseFactory {
         if (value != null) {
             RestVariableConverter converter = null;
             for (RestVariableConverter c : variableConverters) {
-                if (c.getVariableType().isAssignableFrom(value.getClass())) {
+                if (c.canConvert(value)) {
                     converter = c;
                     break;
                 }

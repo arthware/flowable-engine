@@ -15,6 +15,7 @@ package org.flowable.common.rest.variable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 
@@ -56,14 +57,30 @@ public class JsonObjectRestVariableConverter implements RestVariableConverter {
 
     @Override
     public void convertVariableValue(Object variableValue, EngineRestVariable result) {
+
         if (variableValue != null) {
-            if (!(variableValue instanceof JsonNode)) {
+            Object value = unwrapValue(variableValue);
+            if (!(value instanceof JsonNode)) {
                 throw new FlowableIllegalArgumentException("Converter can only convert com.fasterxml.jackson.databind.JsonNode.");
             }
-            result.setValue(variableValue);
+            result.setValue(value);
         } else {
             result.setValue(null);
         }
     }
 
+    protected Object unwrapValue(Object variableValue) {
+        if (!(variableValue instanceof JsonNode)) {
+            if (variableValue instanceof Supplier) {
+                return ((Supplier<?>) variableValue).get();
+            }
+        }
+        return variableValue;
+    }
+
+    @Override
+    public boolean canConvert(Object value) {
+        Object object = unwrapValue(value);
+        return object instanceof JsonNode;
+    }
 }

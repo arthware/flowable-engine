@@ -37,4 +37,8 @@ public interface RestVariableConverter {
      * Converts the given value and sets the converted value in the given {@link EngineRestVariable}.
      */
     void convertVariableValue(Object variableValue, EngineRestVariable result);
+
+    default boolean canConvert(Object value){
+        return getVariableType().isAssignableFrom(value.getClass());
+    }
 }

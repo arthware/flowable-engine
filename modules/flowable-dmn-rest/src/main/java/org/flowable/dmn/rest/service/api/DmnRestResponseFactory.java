@@ -260,7 +260,7 @@ public class DmnRestResponseFactory {
         if (value != null) {
             // Try converting the value
             for (RestVariableConverter c : variableConverters) {
-                if (c.getVariableType().isAssignableFrom(value.getClass())) {
+                if (c.canConvert(value)) {
                     converter = c;
                     break;
                 }
